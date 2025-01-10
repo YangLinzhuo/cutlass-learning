@@ -31,3 +31,6 @@
 #################################################################################################
 
 from .int_tuple import *
+from .layout import *
+from .print import *
+from .swizzle import *

@@ -46,7 +46,7 @@ def print_layout(layout: Layout):
             printf(f"{delim:.{idx_width + 1}s}")
         printf("+\n")
         # Values
-        printf(f"{m: 2d}")  # Row indices
+        printf(f"{m: 2d}  ")  # Row indices
         for n in range(size(layout.shape[1])):
             printf(f"| {int(layout(m, n)):{idx_width - 2}d} ")
         printf("|\n")
