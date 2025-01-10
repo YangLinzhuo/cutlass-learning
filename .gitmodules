@@ -1,0 +1,3 @@
+[submodule "examples/cutlass"]
+	path = examples/cutlass
+	url = https://github.com/NVIDIA/cutlass.git
