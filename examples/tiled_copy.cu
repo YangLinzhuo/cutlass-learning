@@ -20,13 +20,13 @@ __global__ void copy_kernel_general(TensorS S, TensorD D, ThreadLayout, Shape re
     Tensor identity = make_identity_tensor(block_shape);
     Tensor thr_identity = local_partition(identity, ThreadLayout{}, threadIdx.x);
     Tensor predicator = make_tensor<bool>(shape(thr_identity));
-    auto const M = get<0>(real_shape);
-    auto const N = get<1>(real_shape);
+    auto const m = get<0>(real_shape);
+    auto const n = get<1>(real_shape);
     for (int i = 0; i < size(thr_identity); ++i)
     {
-        auto const m = get<0>(thr_identity(i));
-        auto const n = get<1>(thr_identity(i));
-        predicator(i) = (blockIdx.y * get<0>(block_shape) + m) < M && (blockIdx.x * get<1>(block_shape) + n) < N;
+        auto const row = get<0>(thr_identity(i));
+        auto const col = get<1>(thr_identity(i));
+        predicator(i) = (blockIdx.y * get<0>(block_shape) + row) < m && (blockIdx.x * get<1>(block_shape) + col) < n;
     }
 
     copy_if(predicator, thr_tile_S, fragment);
@@ -63,10 +63,10 @@ __global__ void copy_kernel_vectorized(TensorS S, TensorD D, Tiled_Copy tiled_co
 }
 
 template <typename T>
-cudaError_t launch_matrix_copy(T *const src, T *dst, const int M, const int N)
+cudaError_t launch_matrix_copy(T *const src, T *dst, const int m, const int n)
 {
     using namespace cute;
-    auto tensor_shape = make_shape(M, N);
+    auto tensor_shape = make_shape(m, n);
     //
     // Make tensors
     //
@@ -144,8 +144,8 @@ int main(int argc, char **argv)
     using Element = int;
 
     // Define a tensor shape with dynamic extents (m, n)
-    auto const M = 256;
-    auto const N = 512;
+    auto const M = 257;     // change to a number which is power of 2 will use vectorized copy kernel
+    auto const N = 513;     // change to a number which is power of 2 will use vectorized copy kernel
     auto tensor_shape = make_shape(M, N);
 
     //
