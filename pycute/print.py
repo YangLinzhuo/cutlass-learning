@@ -55,7 +55,7 @@ def print_layout(layout: Layout):
     printf("    ")
     for n in range(size(layout.shape[1])):
         printf(f"{delim:.{idx_width + 1}s}")
-    print("+\n")
+    printf("+\n")
 
 
 class TikzColorBlackWhitex8:

@@ -64,7 +64,7 @@ def is_tuple(x) -> bool:
     Check whether variable is a tuple.
     '''
     if isinstance(x, tuple):
-        return all(is_int(e) or is_tuple(e) for e in x)
+        return all(is_int(e) or is_tuple(e) or e is None for e in x)
     else:
         return False
 
