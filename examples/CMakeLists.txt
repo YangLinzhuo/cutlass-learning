@@ -16,6 +16,7 @@ enable_testing()
 
 # Set CUTLASS include directories
 include_directories(cutlass/include)
+include_directories(cutlass/tools/util/include)
 
 file(GLOB SOURCE_FILES *.cu)
 
