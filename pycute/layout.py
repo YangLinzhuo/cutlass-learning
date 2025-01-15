@@ -89,7 +89,7 @@ class Layout(LayoutBase):
     # operator len(L)  (len [rank] like tuples)
     def __len__(self):
         if is_tuple(self.shape):
-            return len(self.shape)
+            return self.rank()
         else:
             return 1
 
@@ -133,6 +133,12 @@ class Layout(LayoutBase):
         '''
         return self(self.size() - 1) + 1
 
+    def rank(self):
+        '''
+        rank(layout)   Rank of the layout
+        '''
+        return len(self.shape)
+
     # print and str
     def __str__(self):
         return f"{self.shape}:{self.stride}"
@@ -146,14 +152,14 @@ def make_layout(*layouts):
     '''
     Make Layout from a list of layouts (each layout it's own mode in the result)
     '''
-    if len(layouts) == 1 and not is_layout(layouts[0]):
+    if rank(layouts) == 1 and not is_layout(layouts[0]):
         layouts = layouts[0]
 
     shape, stride = zip(*((a.shape, a.stride) for a in layouts))
     return Layout(shape, stride)
 
 
-def size(layout):
+def size(layout: Layout):
     '''
     Size of the domain
     '''
@@ -162,11 +168,18 @@ def size(layout):
     return product(layout)
 
 
-def cosize(layout):
+def cosize(layout: Layout):
     '''
     Size of the codomain
     '''
     return layout.cosize()
+
+
+def rank(layout: Layout):
+    '''
+    Rank of the layout
+    '''
+    return layout.rank()
 
 
 def coalesce(layout, profile=None):
@@ -175,11 +188,11 @@ def coalesce(layout, profile=None):
     #                    while preserving the int-to-int function
     '''
     if is_tuple(profile):
-        assert len(layout) >= len(profile)
+        assert rank(layout) >= len(profile)
         return make_layout(
             chain(
                 (coalesce(layout[i], profile[i]) for i in range(0, len(profile))),
-                (layout[i] for i in range(len(profile), len(layout))),
+                (layout[i] for i in range(len(profile), rank(layout))),
             )
         )
 
@@ -212,11 +225,11 @@ def filter_(layout, profile=None):
     Layout filter -- replace all stride-0 modes with size-1 and then coalesce to remove them
     '''
     if is_tuple(profile):
-        assert len(layout) >= len(profile)
+        assert rank(layout) >= len(profile)
         return make_layout(
             chain(
                 (filter_(layout[i], profile[i]) for i in range(0, len(profile))),
-                (layout[i] for i in range(len(profile), len(layout))),
+                (layout[i] for i in range(len(profile), rank(layout))),
             )
         )
 
@@ -244,11 +257,11 @@ def composition(layout_a, layout_b):
     elif is_int(layout_b):
         return composition(layout_a, Layout(layout_b))
     elif is_tuple(layout_b):
-        assert len(layout_a) >= len(layout_b)
+        assert rank(layout_a) >= rank(layout_b)
         return make_layout(
             chain(
-                (composition(layout_a[i], layout_b[i]) for i in range(0, len(layout_b))),
-                (layout_a[i] for i in range(len(layout_b), len(layout_a))),
+                (composition(layout_a[i], layout_b[i]) for i in range(0, rank(layout_b))),
+                (layout_a[i] for i in range(rank(layout_b), rank(layout_a))),
             )
         )
     elif is_tuple(layout_b.shape):
@@ -354,14 +367,14 @@ def logical_divide(layout_a, layout_b):
     elif is_int(layout_b):
         return logical_divide(layout_a, Layout(layout_b))
     elif is_tuple(layout_b):
-        assert len(layout_a) >= len(layout_b)
+        assert rank(layout_a) >= rank(layout_b)
         return make_layout(
             chain(
                 (
                     logical_divide(layout_a[i], layout_b[i])
-                    for i in range(0, len(layout_b))
+                    for i in range(0, rank(layout_b))
                 ),
-                (layout_a[i] for i in range(len(layout_b), len(layout_a))),
+                (layout_a[i] for i in range(rank(layout_b), rank(layout_a))),
             )
         )
 
@@ -380,14 +393,14 @@ def logical_product(layout_a, layout_b):
     elif is_int(layout_b):
         return logical_divide(layout_a, Layout(layout_b))
     elif is_tuple(layout_b):
-        assert len(layout_a) >= len(layout_b)
+        assert rank(layout_a) >= rank(layout_b)
         return make_layout(
             chain(
                 (
                     logical_product(layout_a[i], layout_b[i])
-                    for i in range(0, len(layout_b))
+                    for i in range(0, rank(layout_b))
                 ),
-                (layout_a[i] for i in range(len(layout_b), len(layout_a))),
+                (layout_a[i] for i in range(rank(layout_b), rank(layout_a))),
             )
         )
 
@@ -404,18 +417,18 @@ def hier_unzip(splitter, layout_a, layout_b):
     if layout_b is None:
         return make_layout(Layout(1, 0), layout_a)
     elif is_tuple(layout_b):
-        assert len(layout_a) >= len(layout_b)
+        assert rank(layout_a) >= rank(layout_b)
         # A layout with shape ((A,a),(B,b),(C,c))
         split = make_layout(
-            hier_unzip(splitter, layout_a[i], layout_b[i]) for i in range(0, len(layout_b))
+            hier_unzip(splitter, layout_a[i], layout_b[i]) for i in range(0, rank(layout_b))
         )
         # Gather to shape ((A,B,C,...),(a,b,c,...,y,z))
         return make_layout(
-            make_layout(split[i][0] for i in range(0, len(layout_b))),
+            make_layout(split[i][0] for i in range(0, rank(layout_b))),
             make_layout(
                 chain(
-                    (split[i][1] for i in range(0, len(layout_b))),
-                    (layout_a[i] for i in range(len(layout_b), len(layout_a))),
+                    (split[i][1] for i in range(0, rank(layout_b))),
+                    (layout_a[i] for i in range(rank(layout_b), rank(layout_a))),
                 )
             ),
         )
