@@ -32,5 +32,5 @@
 
 from .int_tuple import *
 from .layout import *
-from .print import *
+from .visual import *
 from .swizzle import *

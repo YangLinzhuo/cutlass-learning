@@ -65,7 +65,7 @@ class Layout(LayoutBase):
     '''
     Layout which describes the mapping of tensor logical address to physical address
     '''
-    def __init__(self, _shape, _stride=None):
+    def __init__(self, _shape, _stride=None, _offset=0):
         if is_int(_shape) or is_tuple(_shape):
             self.shape = _shape
         else:
@@ -81,6 +81,8 @@ class Layout(LayoutBase):
             self.stride = _stride
         else:
             raise TypeError(f"Unsupported type of stride {type(_stride)}")
+
+        self.offset = _offset   # data base offset, used for layout slice
 
     # operator ==
     def __eq__(self, other):
@@ -103,15 +105,13 @@ class Layout(LayoutBase):
         Follow the same behavior of `Layout::operator(Coord const&)` in cute C++
         """
         if has_none(args):
-            if len(args) == 1:
-                return Layout(slice_(args[0], self.shape), slice_(args[0], self.stride))
-            else:
-                return Layout(slice_(args, self.shape), slice_(args, self.stride))
+            coord = args[0] if len(args) == 1 else args
+            layout, offset = slice_and_offset(coord, self)
+            layout.offset = offset
+            return layout
         else:
-            if len(args) == 1:
-                return crd2idx(args[0], self.shape, self.stride)
-            else:
-                return crd2idx(args, self.shape, self.stride)
+            coord = args[0] if len(args) == 1 else args
+            return crd2idx(coord, self.shape, self.stride) + self.offset
 
     # operator []    (get-i like tuples)
     def __getitem__(self, i):

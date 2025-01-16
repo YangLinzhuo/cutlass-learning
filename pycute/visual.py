@@ -2,9 +2,8 @@
 Methods for print layout.
 """
 
-import copy
-
 from .layout import Layout, size, cosize, make_layout, rank, is_tuple
+from .int_tuple import idx2crd
 
 
 def num_digits(x: int) -> int:
@@ -25,9 +24,39 @@ def printf(*args, **kwargs):
     print(*args, **kwargs, end="")
 
 
-def print_layout(layout: Layout):
+def print_layout_1d(layout: Layout):
     '''
-    Print layout string
+    Print layout string for 1d layout
+    '''
+    assert rank(layout) == 1, "Layout must be 1-dimensional"
+    idx_width = num_digits(cosize(layout)) + 2
+    delim = "+-----------------------"
+    printf(layout)
+    printf("\n")
+
+    # Column indices
+    for n in range(size(layout.shape[0])):
+        printf(f"  {n:{idx_width - 2}d} ")
+    printf("\n")
+
+    # Header
+    for n in range(size(layout.shape[0])):
+        printf(f"{delim:.{idx_width + 1}s}")
+    printf("+\n")
+    # Values
+    for n in range(size(layout.shape[0])):
+        printf(f"| {int(layout(n)):{idx_width - 2}d} ")
+    printf("|\n")
+
+    # Footer
+    for n in range(size(layout.shape[0])):
+        printf(f"{delim:.{idx_width + 1}s}")
+    printf("+\n")
+
+
+def print_layout_2d(layout: Layout):
+    '''
+    Print layout string for 2d layout
     '''
     assert rank(layout) == 2, "Layout must be 2-dimensional"
     idx_width = num_digits(cosize(layout)) + 2
@@ -58,6 +87,18 @@ def print_layout(layout: Layout):
     for n in range(size(layout.shape[1])):
         printf(f"{delim:.{idx_width + 1}s}")
     printf("+\n")
+
+
+def print_layout(layout: Layout):
+    '''
+    Wrapper function for printing layout string
+    '''
+    if rank(layout) == 2:
+        print_layout_2d(layout)
+    elif rank(layout) == 1:
+        print_layout_1d(layout)
+    else:
+        raise RuntimeError("The print_layout_function only support layout with rank 1 or 2")
 
 
 class TikzColorBlackWhitex8:
@@ -198,7 +239,7 @@ def print_latex_tv(layout: Layout, thr: Layout, color=None):
     printf("\\end{tikzpicture}\n\\end{document}\n")
 
 
-def print_hier_layout(layout: Layout):
+def print_latex_hier_layout(layout: Layout):
     '''
     Print layout latex for color visualization
     '''
@@ -321,14 +362,14 @@ def print_hier_layout(layout: Layout):
         else:
             stride_str += f"\\textcolor{{{colors[2]}}}{{{layout.stride[1]}}}"
 
-        printf("\\node [draw=white] at (-2, 0.5) {\n"
-        "\\begin{minipage}{0.50\\textwidth}\n"
-        "$$\n"
+        printf("\\node [draw=white] at (-2, 1) {\n"
+        "Layout: \\begin{minipage}{0.50\\textwidth}\n"
+        "$\n"
         "    \\begin{bmatrix}\n"
         "    %s\\\\\n"
         "    %s\n"
         "    \\end{bmatrix}\n"
-        "$$\n"
+        "$\n"
         "\\end{minipage}\n"
         "};\n" % (shape_str, stride_str))
 
@@ -342,3 +383,84 @@ def print_hier_layout(layout: Layout):
 
     # Footer
     printf("\\end{tikzpicture}\n\\end{document}\n")
+
+
+def print_latex_coord(layout: Layout, coord):
+    '''
+    Generic Tensor and Coord to LaTeX TikZ
+    '''
+    assert rank(layout) == 2, "Layout must be 2-dimensional"
+    sub_layout = layout(coord)
+
+    # Commented prints
+    printf("%% Layout: ")
+    printf(layout)
+    printf("\n")
+    printf("%% Coord : ")
+    printf(coord)
+    printf("\n")
+    # Header
+    printf("\\documentclass[convert]{standalone}\n"
+           "\\usepackage{tikz}\n"
+           "\\usepackage{amsmath}\n\n"
+           "\\begin{document}\n"
+           "\\begin{tikzpicture}[x={(0cm,-1cm)},y={(1cm,0cm)},"
+           "every node/.style={minimum size=1cm, outer sep=0pt}]\n\n")
+
+    # Layout
+    for i in range(size(layout.shape[0])):
+        for j in range(size(layout.shape[1])):
+            printf("\\node[fill=%s] at (%d,%d) {\\shortstack{%d}};\n"
+                   % ("white", i, j, layout(i, j)))
+
+    def transform_coord(s, c):
+        '''
+        s: shape
+        c: coord
+        '''
+        if is_tuple(c):
+            assert len(c) == 2, "The rank of coord must be 2-dimensional"
+            return c[1] * s[0] + c[0]
+        else:
+            return c
+
+    for i in range(size(sub_layout)):
+        idx = sub_layout(i)
+        row, col = idx2crd(idx, layout.shape, layout.stride)
+        printf(f"%% coord: ({row}, {col})\n")
+        new_row = transform_coord(layout.shape[0], row)
+        new_col = transform_coord(layout.shape[1], col)
+        printf("\\node[fill=%s] at (%d,%d) {\\shortstack{%d}};\n"
+               % ("cyan", new_row, new_col, idx))
+
+    # Grid
+    printf("\\draw[color=black,thick,shift={(-0.5,-0.5)}] (0,0) grid (%d,%d);\n\n"
+           % (size(layout.shape[0]), size(layout.shape[1])))
+    # Labels
+    j = -1
+    for i in range(size(layout.shape[0])):
+        printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n" % (i, j, i))
+    i = -1
+    for j in range(size(layout.shape[1])):
+        printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n" % (i, j, j))
+
+    shape_str=  f"{layout.shape[0]}, {layout.shape[1]}"
+    stride_str = f"{layout.stride[0]}, {layout.stride[1]}"
+    coord_str = str(coord)
+    printf("\\node [draw=white] at (-2.5, 1) {\n"
+        "\\begin{minipage}{0.50\\textwidth}\n"
+        "Layout: $\n"
+        "    \\begin{bmatrix}\n"
+        "    %s\\\\\n"
+        "    %s\n"
+        "    \\end{bmatrix}\n"
+        "$\n"
+        "\\\\\n"
+        "\\\\\n"
+        "Coord: %s\n"
+        "\\end{minipage}\n"
+        "};\n" % (shape_str, stride_str, coord_str))
+
+    # Footer
+    printf("\\end{tikzpicture}\n"
+           "\\end{document}\n")
