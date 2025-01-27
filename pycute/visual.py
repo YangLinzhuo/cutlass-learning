@@ -279,13 +279,6 @@ def print_latex_hier_layout(layout: Layout):
         % (size(layout.shape[0]), size(layout.shape[1]))
     )
 
-    printf(
-        "\\draw[color=black,line width=1mm,shift={(-0.5,-0.5)}] "
-        "(%d, %d) rectangle (%d, %d);\n"
-        % (0, 0,
-           size(layout.shape[0]), size(layout.shape[1]))
-    )
-
     line_str = "\\draw[color=gray,line width=1mm,opacity=0.3] "
     line_str += f"{line_nodes[0][1]}"
     line_nodes.sort(key=lambda x: x[0])
@@ -347,31 +340,38 @@ def print_latex_hier_layout(layout: Layout):
             printf("\\node[text=%s] at ([shift={(0.75,0.1)}]%d, %d) {\\texttt{+%d}};\n"
                    % (colors[2], n_row, window_size[1], layout.stride[1]))
 
-        # Show colorized layout
-        shape_str=  f"{layout.shape[0]}, {layout.shape[1]}"
-        stride_str = ""
-        if is_tuple(layout.stride[0]):
-            stride_str += (f"(\\textcolor{{{colors[0]}}}{{{layout.stride[0][0]}}},"
-                        f"\\textcolor{{{colors[1]}}}{{{layout.stride[0][1]}}})")
-        else:
-            stride_str += f"\\textcolor{{{colors[0]}}}{{{layout.stride[0]}}}"
-        stride_str += ","
-        if is_tuple(layout.stride[1]):
-            stride_str += (f"(\\textcolor{{{colors[2]}}}{{{layout.stride[1][0]}}},"
-                        f"\\textcolor{{{colors[3]}}}{{{layout.stride[1][1]}}})")
-        else:
-            stride_str += f"\\textcolor{{{colors[2]}}}{{{layout.stride[1]}}}"
+    printf(
+        "\\draw[color=black,line width=1mm,shift={(-0.5,-0.5)}] "
+        "(%d, %d) rectangle (%d, %d);\n"
+        % (0, 0,
+           size(layout.shape[0]), size(layout.shape[1]))
+    )
 
-        printf("\\node [draw=white] at (-2, 1) {\n"
-        "Layout: \\begin{minipage}{0.50\\textwidth}\n"
-        "$\n"
-        "    \\begin{bmatrix}\n"
-        "    %s\\\\\n"
-        "    %s\n"
-        "    \\end{bmatrix}\n"
-        "$\n"
-        "\\end{minipage}\n"
-        "};\n" % (shape_str, stride_str))
+    # Show colorized layout
+    shape_str=  f"{layout.shape[0]}, {layout.shape[1]}"
+    stride_str = ""
+    if is_tuple(layout.stride[0]):
+        stride_str += (f"(\\textcolor{{{colors[0]}}}{{{layout.stride[0][0]}}},"
+                    f"\\textcolor{{{colors[1]}}}{{{layout.stride[0][1]}}})")
+    else:
+        stride_str += f"\\textcolor{{{colors[0]}}}{{{layout.stride[0]}}}"
+    stride_str += ","
+    if is_tuple(layout.stride[1]):
+        stride_str += (f"(\\textcolor{{{colors[2]}}}{{{layout.stride[1][0]}}},"
+                    f"\\textcolor{{{colors[3]}}}{{{layout.stride[1][1]}}})")
+    else:
+        stride_str += f"\\textcolor{{{colors[2]}}}{{{layout.stride[1]}}}"
+
+    printf("\\node [draw=white] at (-2, 1) {\n"
+    "Layout: \\begin{minipage}{0.50\\textwidth}\n"
+    "$\n"
+    "    \\begin{bmatrix}\n"
+    "    %s\\\\\n"
+    "    %s\n"
+    "    \\end{bmatrix}\n"
+    "$\n"
+    "\\end{minipage}\n"
+    "};\n" % (shape_str, stride_str))
 
     # Labels
     j = -1.2
